@@ -10,6 +10,7 @@ dependencies:
   # Core scientific python
   - numpy
   - pandas
+  - zipp>=3.0
 
   # Geospatial libraries
   # Coordinates and CRSs
