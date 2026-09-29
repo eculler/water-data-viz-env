@@ -45,9 +45,11 @@ dependencies:
   - seaborn
   # Holoviews
   # --- Avoid compatibility issues with bokeh and new holoviews
-  - holoviews<=1.19
+  - holoviews
   - hvplot
-  - geoviews>=1.10
+  - geoviews
+  - panel
+  - watchfiles
   - selenium
   - phantomjs
   - jupyter_bokeh
