@@ -5,17 +5,19 @@ set -ex
 # -------------------------------------------------------------
 # Git global defaults
 # -------------------------------------------------------------
-git config --system core.editor "nano" && \
-    git config --system init.defaultBranch main
+git config --global core.editor "nano" && \
+    git config --global init.defaultBranch main && \
+    git config --global pull.rebase false
 
 # -------------------------------------------------------------
 # Nano — friendlier defaults
 # -------------------------------------------------------------
-cat > /etc/nanorc << 'EOF'
-set softwrap
-set mouse
+# Configure nano for the notebook user.
+cat > "${HOME}/.nanorc" <<'EOF'
 set linenumbers
-include "/usr/share/nano/*.nanorc"
+set mouse
+set tabsize 4
+set tabstospaces
 EOF
 
 # -------------------------------------------------------------
