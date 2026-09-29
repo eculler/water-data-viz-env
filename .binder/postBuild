@@ -5,7 +5,7 @@ set -ex
 # -------------------------------------------------------------
 # GitHub CLI (gh)
 # -------------------------------------------------------------
-RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
         | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg && \
     chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg && \
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
@@ -21,13 +21,13 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
 #   pip install --user <pkg> → ~/.local    (persists on PVC across restarts)
 #   conda/mamba install      → /opt/conda  (works without sudo)
 # -------------------------------------------------------------
-RUN chown -R ${NB_UID}:${NB_GID} /opt/conda
+chown -R ${NB_UID}:${NB_GID} /opt/conda
 
 # -------------------------------------------------------------
 # Micromamba root prefix → /opt/conda so envs land in the
 # standard conda location instead of ~/.local/share/mamba
 # -------------------------------------------------------------
-ENV MAMBA_ROOT_PREFIX=/home/jovyan/.local/share/mamba \
+export MAMBA_ROOT_PREFIX=/home/jovyan/.local/share/mamba \
     MAMBA_EXE=/usr/local/bin/micromamba
 
 # Initialize micromamba shell hook for bash:
@@ -35,14 +35,14 @@ ENV MAMBA_ROOT_PREFIX=/home/jovyan/.local/share/mamba \
 #   - /etc/profile.d/   → login shells
 # Root prefix is ~/.local/share/mamba — lives on the PVC so envs
 # persist across pod restarts and are always writable at runtime.
-RUN micromamba shell init --shell bash --root-prefix=/home/jovyan/.local/share/mamba && \
+micromamba shell init --shell bash --root-prefix=/home/jovyan/.local/share/mamba && \
     echo 'eval "$(micromamba shell hook --shell bash)"' >> /etc/bash.bashrc && \
     echo 'eval "$(micromamba shell hook --shell bash)"' > /etc/profile.d/micromamba.sh && \
     chmod +x /etc/profile.d/micromamba.sh
 
 # Convenience aliases so muscle memory works regardless of which
 # command the user types: deactivate, conda deactivate, micromamba deactivate
-RUN cat >> /etc/bash.bashrc << 'BASHRC'
+cat >> /etc/bash.bashrc << 'BASHRC'
 
 alias conda="micromamba"
 
@@ -65,7 +65,7 @@ BASHRC
 # -------------------------------------------------------------
 # Resolve libnss_wrapper.so path at build time
 # -------------------------------------------------------------
-RUN NSS_WRAPPER_LIB=$(find /usr/lib -name "libnss_wrapper.so" 2>/dev/null | head -1) && \
+NSS_WRAPPER_LIB=$(find /usr/lib -name "libnss_wrapper.so" 2>/dev/null | head -1) && \
     echo "NSS_WRAPPER_LIB=${NSS_WRAPPER_LIB}" >> /etc/environment && \
     echo "Found libnss_wrapper at: ${NSS_WRAPPER_LIB}"
 
@@ -73,17 +73,17 @@ RUN NSS_WRAPPER_LIB=$(find /usr/lib -name "libnss_wrapper.so" 2>/dev/null | head
 # PATH — three layers so every context gets it
 # (terminal, notebook kernel, subprocess, login shell)
 # -------------------------------------------------------------
-ENV PATH="/home/jovyan/.local/bin:/opt/conda/bin:${PATH}" \
+export PATH="/home/jovyan/.local/bin:/opt/conda/bin:${PATH}" \
     PYTHONUSERBASE="/home/jovyan/.local"
 
-RUN echo 'export PATH="/home/jovyan/.local/bin:/opt/conda/bin:$PATH"' >> /etc/bash.bashrc && \
+echo 'export PATH="/home/jovyan/.local/bin:/opt/conda/bin:$PATH"' >> /etc/bash.bashrc && \
     echo 'export PATH="/home/jovyan/.local/bin:/opt/conda/bin:$PATH"' \
         > /etc/profile.d/user-local-path.sh && \
     chmod +x /etc/profile.d/user-local-path.sh
 
 # Jupyter server config: PATH is set before any kernel starts
 # so !cookiecutter, !black, subprocess.run(...) all work in notebooks
-RUN mkdir -p /etc/jupyter && \
+mkdir -p /etc/jupyter && \
     cat > /etc/jupyter/jupyter_server_config.py << 'EOF'
 import os
 os.environ.setdefault(
@@ -95,13 +95,13 @@ EOF
 # -------------------------------------------------------------
 # Git global defaults
 # -------------------------------------------------------------
-RUN git config --system core.editor "nano" && \
+git config --system core.editor "nano" && \
     git config --system init.defaultBranch main
 
 # -------------------------------------------------------------
 # Nano — friendlier defaults
 # -------------------------------------------------------------
-RUN cat > /etc/nanorc << 'EOF'
+cat > /etc/nanorc << 'EOF'
 set softwrap
 set mouse
 set linenumbers
@@ -112,9 +112,9 @@ EOF
 # GitHub SSH — pre-seed known_hosts so users are never blocked
 # Users mount their private key via Kubernetes secret or paste it
 # -------------------------------------------------------------
-ENV REPO_URL=https://github.com/DigitalWaters-fi/community.git
+export REPO_URL=https://github.com/DigitalWaters-fi/community.git
 
-RUN mkdir -p /home/jovyan/.ssh && \
+mkdir -p /home/jovyan/.ssh && \
     ssh-keyscan github.com >> /home/jovyan/.ssh/known_hosts && \
     chmod 700 /home/jovyan/.ssh && \
     chmod 644 /home/jovyan/.ssh/known_hosts && \
@@ -123,7 +123,7 @@ RUN mkdir -p /home/jovyan/.ssh && \
 # -------------------------------------------------------------
 # Entrypoint (Noppe-style)
 # -------------------------------------------------------------
-RUN cat << 'EOF' > /usr/local/bin/nss-entrypoint.sh
+cat << 'EOF' > /usr/local/bin/nss-entrypoint.sh
 #!/bin/bash
 set -e
 
@@ -206,7 +206,7 @@ echo ""
 exec "$@"
 EOF
 
-RUN chmod +x /usr/local/bin/nss-entrypoint.sh
+chmod +x /usr/local/bin/nss-entrypoint.sh
 
 # -------------------------------------------------------------
 # OpenShift: group-writable so arbitrary UIDs can write
@@ -215,13 +215,5 @@ RUN chmod +x /usr/local/bin/nss-entrypoint.sh
 # chown /opt/conda was already done above. Calling fix-permissions on
 # /opt/conda recursively touches thousands of files and causes Kubernetes
 # to take much longer setting volume ownership on pod start (fsGroup chown).
-RUN chown -R ${NB_UID}:${NB_GID} /home/jovyan && \
+chown -R ${NB_UID}:${NB_GID} /home/jovyan && \
     chmod -R g+rX /home/jovyan
-
-# -------------------------------------------------------------
-# Runtime user
-# -------------------------------------------------------------
-USER ${NB_USER}
-
-ENTRYPOINT ["/usr/local/bin/nss-entrypoint.sh"]
-CMD ["start-notebook.sh"]
